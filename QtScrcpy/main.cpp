@@ -12,7 +12,6 @@
 #include "stream.h"
 
 static Dialog *g_mainDlg = Q_NULLPTR;
-
 static QtMessageHandler g_oldMessageHandler = Q_NULLPTR;
 void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QString &msg);
 void installTranslator();
@@ -55,6 +54,10 @@ int main(int argc, char *argv[])
     }
 
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+
+#if (QT_VERSION >= QT_VERSION_CHECK(5,14,0))
+    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+#endif
 
     QSurfaceFormat varFormat = QSurfaceFormat::defaultFormat();
     varFormat.setVersion(2, 0);
@@ -100,19 +103,15 @@ int main(int argc, char *argv[])
         file.close();
     }
 
-    g_mainDlg = new Dialog;
-    g_mainDlg->setWindowTitle(Config::getInstance().getTitle());
+    g_mainDlg = new Dialog {};
     g_mainDlg->show();
 
-    qInfo(
-        "%s",
-        QObject::tr("This software is completely open source and free. Strictly used for illegal purposes, or at your own risk. You can download it at the "
-                    "following address:")
-            .toUtf8()
-            .data());
-    qInfo() << QString("QtScrcpy %1 <https://github.com/barry-ran/QtScrcpy>").arg(QCoreApplication::applicationVersion()).toUtf8();
+    qInfo() << QObject::tr("This software is completely open source and free. Use it at your own risk. You can download it at the "
+            "following address:");
+    qInfo() << QString("QtScrcpy %1 <https://github.com/barry-ran/QtScrcpy>").arg(QCoreApplication::applicationVersion());
 
     int ret = a.exec();
+    delete g_mainDlg;
 
 #if defined(Q_OS_WIN32) || defined(Q_OS_OSX)
     MouseTap::getInstance()->quitMouseEventTap();
@@ -131,11 +130,11 @@ void installTranslator()
     QString languagePath = ":/i18n/";
     switch (language) {
     case QLocale::Chinese:
-        languagePath += "QtScrcpy_zh.qm";
+        languagePath += "zh_CN.qm";
         break;
     case QLocale::English:
     default:
-        languagePath += "QtScrcpy_en.qm";
+        languagePath += "en_US.qm";
     }
 
     translator.load(languagePath);
@@ -173,12 +172,12 @@ void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QS
         g_oldMessageHandler(type, context, msg);
     }
 
-    // qt log info big than warning?
-    float fLogLevel = 1.0f * g_msgType;
+    // Is Qt log level higher than warning?
+    float fLogLevel = g_msgType;
     if (QtInfoMsg == g_msgType) {
         fLogLevel = QtDebugMsg + 0.5f;
     }
-    float fLogLevel2 = 1.0f * type;
+    float fLogLevel2 = type;
     if (QtInfoMsg == type) {
         fLogLevel2 = QtDebugMsg + 0.5f;
     }
